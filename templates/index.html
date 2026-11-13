@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Özel Türkçe GPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8 font-sans">
+    
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
+        
+        <!-- SOL MENÜ -->
+        <div class="w-full md:w-1/4 bg-gray-800 p-5 rounded-lg shadow-2xl border border-gray-700 h-fit">
+            <h2 class="text-xl font-bold mb-4 text-green-400">Hazır Başlangıçlar</h2>
+            <p class="text-xs text-gray-400 mb-4">Metni panele aktarmak için tıklayın.</p>
+            <div class="flex flex-col gap-3">
+                <button class="prompt-btn text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition shadow-sm border border-gray-600">Gönül gurbet ele varma</button>
+                <button class="prompt-btn text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition shadow-sm border border-gray-600">Sabahınan esen seher yeli mi</button>
+                <button class="prompt-btn text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition shadow-sm border border-gray-600">Bir güzel ki on yaşına girince</button>
+                <button class="prompt-btn text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition shadow-sm border border-gray-600">Ay doğar aşar gider kızlar</button>
+            </div>
+        </div>
+
+        <!-- SAĞ PANEL -->
+        <div class="w-full md:w-3/4 bg-gray-800 p-6 md:p-8 rounded-lg shadow-2xl border border-gray-700">
+            <h1 class="text-3xl font-bold mb-2 text-blue-400">Türkçe Dil Modeli (Custom GPT)</h1>
+            <p class="text-gray-400 mb-8 text-sm">PyTorch ile sıfırdan eğitilmiş özbağlanımlı Transformer Mimarisi</p>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2 text-gray-300">Başlangıç Metni (Prompt)</label>
+                <textarea id="prompt" rows="3" 
+                          class="w-full bg-gray-900 text-white rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700" 
+                          placeholder="Bir başlangıç cümlesi yazın..."></textarea>
+            </div>
+            
+            <!-- 3 Sütunlu Kontrol Paneli -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 bg-gray-900 p-4 rounded-md border border-gray-700">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Uzunluk (Tokens): <span id="token-val" class="font-bold text-blue-400">100</span></label>
+                    <input type="range" id="max_tokens" min="10" max="300" value="100" class="w-full accent-blue-500" 
+                           oninput="document.getElementById('token-val').innerText = this.value">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Rastgelelik (Temp): <span id="temp-val" class="font-bold text-blue-400">0.8</span></label>
+                    <input type="range" id="temperature" min="0.1" max="1.5" step="0.1" value="0.8" class="w-full accent-blue-500" 
+                           oninput="document.getElementById('temp-val').innerText = this.value">
+                </div>
+                <!-- Yeni Top-K Sürgüsü -->
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Kelime Filtresi (Top-K): <span id="topk-val" class="font-bold text-blue-400">40</span></label>
+                    <input type="range" id="top_k" min="1" max="150" value="40" class="w-full accent-blue-500" 
+                           oninput="document.getElementById('topk-val').innerText = this.value">
+                </div>
+            </div>
+            
+            <button id="generate-btn" 
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-md transition duration-200 shadow-lg flex justify-center items-center">
+                <span>Canlı Metin Üret</span>
+            </button>
+            
+            <div class="mt-8">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-green-400">Model Çıktısı:</h2>
+                    <button id="copy-btn" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded transition hidden">Kopyala</button>
+                </div>
+                <!-- Çıktının akacağı div -->
+                <div id="output" 
+                     class="bg-gray-900 p-5 rounded-md min-h-[150px] whitespace-pre-wrap text-gray-200 border border-gray-700 leading-relaxed">
+                    Henüz bir üretim yapılmadı. Ağırlıklar bekleniyor...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.prompt-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.getElementById('prompt').value = e.target.innerText.trim();
+            });
+        });
+
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(document.getElementById('output').innerText);
+            alert("Çıktı kopyalandı!");
+        });
+
+        document.getElementById('generate-btn').addEventListener('click', async () => {
+            const prompt = document.getElementById('prompt').value;
+            const max_tokens = parseInt(document.getElementById('max_tokens').value);
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const top_k = parseInt(document.getElementById('top_k').value); // Top-K verisini al
+            
+            const outputDiv = document.getElementById('output');
+            const btn = document.getElementById('generate-btn');
+            const copyBtn = document.getElementById('copy-btn');
+
+            if(!prompt.trim()) { alert("Lütfen bir başlangıç metni girin!"); return; }
+
+            // Arayüzü Üretim Moduna Al
+            btn.disabled = true;
+            btn.innerHTML = `Model Düşünüyor... <svg class="animate-spin ml-2 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            outputDiv.innerText = "";
+            copyBtn.classList.add("hidden");
+
+            try {
+                // Endpointi /stream olarak değiştirdik
+                const response = await fetch('/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, max_new_tokens: max_tokens, temperature, top_k })
+                });
+
+                if (!response.ok) throw new Error("Sunucu yanıt vermedi");
+
+                // JavaScript ReadableStream ile canlı okuma (Streaming Efekti)
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        copyBtn.classList.remove("hidden");
+                        break;
+                    }
+                    // Gelen paketi utf-8 olarak decode edip div'in içine ekle
+                    outputDiv.innerText += decoder.decode(value, { stream: true });
+                }
+            } catch (error) {
+                outputDiv.innerText = "❌ Hata: Sunucu bağlantısı koptu.";
+            }
+
+            // Üretim bitince butonu eski haline getir
+            btn.disabled = false;
+            btn.innerHTML = "<span>Canlı Metin Üret</span>";
+        });
+    </script>
+</body>
+</html>
